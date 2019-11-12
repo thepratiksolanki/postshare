@@ -110,13 +110,28 @@
                 // Validate password 
                 if(empty($data['password'])){
                     $data['password_err'] = 'Please enter password';
-                } elseif(strlen($data['password']) < 6){
-                    $data['password_err'] = 'Password should be atleast 6 characters';
+                }
+                // Check for user/email
+                if($this->userModel->findUserByEmail($data['email'])){
+                    // User found
+                } else {
+                    // User not found
+                    $data['email_err'] = 'User not found';
                 }
                 // Make sure errors are empty
                 if(empty($data['email_err']) && empty($data['password_err'])){
                     // Validated
-                    die('SUCCESS');
+                    // Check and set logged in user
+                    $loggedInUser = $this->userModel->login($data['email'], $data['password']);
+
+                    if($loggedInUser){
+                        // Create session
+                        $this->createUserSession($loggedInUser);
+                    } else {
+                        $data['password_err'] = 'Password incorrect';
+
+                        $this->view('users/login', $data);
+                    }
                 } else {
                     $this->view('users/login', $data);
                 }
@@ -131,6 +146,29 @@
 
                 // Load view
                 $this->view('users/login', $data);
+            }
+        }
+
+        public function createUserSession($user){
+            $_SESSION['user_id'] = $user->id;
+            $_SESSION['user_name'] = $user->name;
+            $_SESSION['user_email'] = $user->email;
+            redirect('pages/index');
+        }
+
+        public function logout(){
+            unset($_SESSION['user_id']);
+            unset($_SESSION['user_email']);
+            unset($_SESSION['user_name']);
+            session_destroy();
+            redirect('users/login');
+        }
+
+        public function isLoggedIn(){
+            if(isset($_SESSION['user_id'])){
+                return true;
+            } else {
+                return false;
             }
         }
     }
